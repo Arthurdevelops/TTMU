@@ -40,22 +40,18 @@ export class Song {
 }
 
 export function populatePlaylist(): Playlist {
-  const adoreU = new Song(
-    "Adore U",
-    "Fred again..",
-    "/audio/adore-u.mp3"
-  );
+  const adoreU = new Song("Adore U", "Fred again..", "/audio/adore-u.mp3");
 
   const oneMoreTime = new Song(
     "One More Time",
     "Daft Punk",
-    "/audio/one-more-time.mp3"
+    "/audio/one_more_time.mp3"
   );
 
   const theLessIKnowTheBetter = new Song(
     "The Less I Know The Better",
     "Tame Impala",
-    "/audio/the-less-i-know-the-better.mp3"
+    "/audio/the_less_i_know_the_better.mp3"
   );
 
   const chillHousePlaylist = new Playlist([
