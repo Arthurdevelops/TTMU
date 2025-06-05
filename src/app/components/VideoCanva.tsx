@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import AudioPlayer from "./AudioPlayer";
 
 interface NormalizedLandmark {
   x: number;
@@ -40,14 +41,12 @@ declare global {
 
 export default function VideoCanva() {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const [isOn, setIsOn] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [distance, setDistance] = useState<number>(0);
   const handsRef = useRef<Hands | null>(null);
   const animationFrameRef = useRef<number | null>(null);
-  const [audioLoaded, setAudioLoaded] = useState(false);
+  const [volume, setVolume] = useState<number>(1);
+  const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
 
   const calculateDistance = (landmarks: NormalizedLandmark[]) => {
     // Index 4 est le pouce, Index 8 est l'index
@@ -60,12 +59,10 @@ export default function VideoCanva() {
   };
 
   const updateVolume = useCallback((newDistance: number) => {
-    if (audioRef.current) {
-      // Convertir la distance (0-1) en volume (0-1)
-      // Plus la distance est grande, plus le volume est bas
-      const volume = Math.max(0, Math.min(1, 1 - newDistance));
-      audioRef.current.volume = volume;
-    }
+    // Convertir la distance (0-1) en volume (0-1)
+    // Plus la distance est grande, plus le volume est bas
+    const volume = Math.max(0, Math.min(1, 1 - newDistance));
+    setVolume(volume);
   }, []);
 
   const startWebcam = useCallback(async () => {
@@ -78,6 +75,7 @@ export default function VideoCanva() {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
+        setIsCameraActive(true);
 
         // Initialiser MediaPipe Hands
         handsRef.current = new window.Hands({
@@ -116,42 +114,10 @@ export default function VideoCanva() {
         // Démarrer le traitement des frames
         processFrame();
       }
-      setIsOn(true);
     } catch (err) {
       console.error("Erreur d'accès à la webcam :", err);
     }
   }, [updateVolume]);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.addEventListener("loadeddata", () => {
-        console.log("Audio chargé avec succès");
-        setAudioLoaded(true);
-      });
-
-      audioRef.current.addEventListener("error", (e) => {
-        console.error("Erreur de chargement audio:", e);
-        setAudioLoaded(false);
-      });
-    }
-  }, []);
-
-  const toggleAudio = () => {
-    if (audioRef.current && audioLoaded) {
-      if (isPlaying) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-      } else {
-        audioRef.current.play().catch((error) => {
-          console.error("Erreur lors de la lecture audio:", error);
-          setIsPlaying(false);
-        });
-        setIsPlaying(true);
-      }
-    } else {
-      console.log("Audio non chargé");
-    }
-  };
 
   useEffect(() => {
     // Charger le script MediaPipe Hands
@@ -181,12 +147,9 @@ export default function VideoCanva() {
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
     }
-    if (audioRef.current) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    }
-    setIsOn(false);
+
     setDistance(0);
+    setIsCameraActive(false);
   };
 
   return (
@@ -198,30 +161,16 @@ export default function VideoCanva() {
         className="rounded-md shadow-md"
         muted
       />
-      <audio
-        ref={audioRef}
-        src={`${window.location.origin}/audio/adore-u.mp3`}
-        loop
-        preload="auto"
-      />
       <div className="mt-4">
         <p className="text-xl font-bold">Distance: {distance.toFixed(3)}</p>
         <p className="text-xl font-bold">Volume: {(1 - distance).toFixed(3)}</p>
-        <div className="space-x-4">
-          {isOn ? (
-            <button onClick={stopWebcam}>Arrêter la webcam</button>
-          ) : (
-            <button onClick={startWebcam}>Démarrer la webcam</button>
-          )}
-          <button
-            onClick={toggleAudio}
-            disabled={!audioLoaded}
-            className={!audioLoaded ? "opacity-50 cursor-not-allowed" : ""}
-          >
-            {isPlaying ? "Pause" : "Play"} Audio
-            {!audioLoaded && " (Chargement...)"}
-          </button>
-        </div>
+        <button
+          onClick={isCameraActive ? stopWebcam : startWebcam}
+          className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+        >
+          {isCameraActive ? "Stop" : "Start"}
+        </button>
+        <AudioPlayer volume={volume} />
       </div>
     </div>
   );
